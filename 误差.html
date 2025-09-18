@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多次测量值误差分析</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e9f7ef;
+            border-radius: 5px;
+            display: none;
+        }
+        .results h2 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+        .result-item {
+            margin-bottom: 10px;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .formula {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>多次测量值误差分析</h1>
+        <div class="input-group">
+            <label for="measurements">请输入多次测量值（用逗号分隔）：</label>
+            <input type="text" id="measurements" placeholder="例如：10.2, 10.5, 10.3, 10.4, 10.6">
+        </div>
+        <button onclick="calculate()">计算平均值和分散性</button>
+        <div id="error" class="error"></div>
+        <div id="results" class="results">
+            <h2>计算结果</h2>
+            <div class="result-item">
+                <strong>测量值：</strong><span id="values"></span>
+            </div>
+            <div class="result-item">
+                <strong>算术平均值：</strong><span id="mean"></span>
+            </div>
+            <div class="result-item">
+                <strong>绝对误差：</strong><span id="absoluteErrors"></span>
+            </div>
+            <div class="result-item">
+                <strong>平均绝对误差：</strong><span id="meanAbsoluteError"></span>
+            </div>
+            <div class="result-item">
+                <strong>标准偏差（贝塞耳公式）：</strong><span id="stdDev"></span>
+            </div>
+            <div class="result-item">
+                <strong>相对标准偏差：</strong><span id="relativeStdDev"></span>
+            </div>
+        </div>
+        <div class="formula">
+            <h3>计算公式说明</h3>
+            <p><strong>算术平均值：</strong> x̄ = Σxᵢ/n</p>
+            <p><strong>绝对误差：</strong> Δᵢ = |xᵢ - x̄|</p>
+            <p><strong>平均绝对误差：</strong> MAE = Σ|Δᵢ|/n</p>
+            <p><strong>贝塞耳公式（样本标准偏差）：</strong> s = √[Σ(xᵢ-x̄)²/(n-1)]</p>
+            <p><strong>相对标准偏差：</strong> RSD = (s/x̄) × 100%</p>
+        </div>
+    </div>
+
+    <script>
+    function calculate() {
+        try {
+            // 获取输入值
+            const input = document.getElementById('measurements').value;
+            const errorDiv = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
+            
+            // 清除之前的错误和结果
+            errorDiv.textContent = '';
+            resultsDiv.style.display = 'none';
+            
+            // 验证输入
+            if (!input.trim()) {
+                errorDiv.textContent = '请输入测量值';
+                return;
+            }
+            
+            // 解析输入值
+            const values = input.split(',').map(item => {
+                const num = parseFloat(item.trim());
+                if (isNaN(num)) {
+                    throw new Error(`"${item.trim()}" 不是有效的数字`);
+                }
+                return num;
+            });
+            
+            if (values.length < 2) {
+                errorDiv.textContent = '请至少输入两个测量值';
+                return;
+            }
+            
+            // 计算算术平均值
+            const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+            
+            // 计算绝对误差
+            const absoluteErrors = values.map(value => Math.abs(value - mean));
+            
+            // 计算平均绝对误差
+            const meanAbsoluteError = absoluteErrors.reduce((sum, value) => sum + value, 0) / absoluteErrors.length;
+            
+            // 使用贝塞耳公式计算标准偏差
+            const squaredDifferences = values.map(value => Math.pow(value - mean, 2));
+            const sumSquaredDifferences = squaredDifferences.reduce((sum, value) => sum + value, 0);
+            const stdDev = Math.sqrt(sumSquaredDifferences / (values.length - 1));
+            
+            // 计算相对标准偏差
+            const relativeStdDev = (stdDev / mean) * 100;
+            
+            // 显示结果
+            document.getElementById('values').textContent = values.join(', ');
+            document.getElementById('mean').textContent = mean.toFixed(6);
+            document.getElementById('absoluteErrors').textContent = absoluteErrors.map(e => e.toFixed(6)).join(', ');
+            document.getElementById('meanAbsoluteError').textContent = meanAbsoluteError.toFixed(6);
+            document.getElementById('stdDev').textContent = stdDev.toFixed(6);
+            document.getElementById('relativeStdDev').textContent = relativeStdDev.toFixed(4) + '%';
+            
+            resultsDiv.style.display = 'block';
+            
+        } catch (e) {
+            errorDiv.textContent = '输入错误: ' + e.message;
+        }
+    }
+    </script>
+</body>
+</html>
